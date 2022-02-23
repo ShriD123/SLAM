@@ -23,7 +23,8 @@ class TurtleBot:
         # self.pub_robot = rospy.Publisher('/mobile_base/command/velocity')
         self.pub_odom = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
-        self.sub_odom = rospy.Subscriber('/odom', Odometry, self.callback_odom)
+        self.sub_odom = rospy.Subscriber('/ground_truth/state', Odometry, self.callback_odom)
+        # self.sub_odom = rospy.Subscriber('/odom', Odometry, self.callback_odom)
         self.sub_laser = rospy.Subscriber('/scan', LaserScan, self.callback_sense)
     
     # Update every 10ms!
@@ -48,11 +49,12 @@ class TurtleBot:
     # Callback Function 
     def callback_odom(self, msg):
         print(msg.pose)
+        pass
 
     # Callback Function 
     def callback_sense(self, msg):
         # rospy.loginfo('I heard %s', msg)
-        print(msg.ranges)
+        # print(msg.ranges[0])
         pass
 
 #
@@ -65,7 +67,7 @@ if __name__ == "__main__":
 
     # Instantiate the trajectory generator object, encapsulating all
     # the computation and local variables.
-    slam = SLAM()
+    slam = TurtleBot()
 
     # Prepare a servo loop at 100Hz.
     rate  = 100;
@@ -85,7 +87,7 @@ if __name__ == "__main__":
         t = (servotime - starttime).to_sec()
 
         # Update the controller.
-        slam.update(t)
+        slam.update(t, stop=True)
 
         # Wait for the next turn.  The timing is determined by the
         # above definition of servo.
