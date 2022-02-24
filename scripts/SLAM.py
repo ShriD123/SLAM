@@ -26,6 +26,18 @@ class TurtleBot:
         self.sub_odom = rospy.Subscriber('/ground_truth/state', Odometry, self.callback_odom)
         # self.sub_odom = rospy.Subscriber('/odom', Odometry, self.callback_odom)
         self.sub_laser = rospy.Subscriber('/scan', LaserScan, self.callback_sense)
+
+        # TODO: Implement the ROS Time Synchronizer
+        # Could also ask TF where the reference frame was at what time, technically right thing to do
+        # Data is stamped with the right time and the reference frame
+
+        # Mapping Help
+        # Have a publisher that publishes an image at 1-2 Hz (grid of the entire area)
+        # Transform the laser scanner to be in the map coordinates, then fill in with pixels
+        # Check this: Map --> Odom --> Base --> LaserScan     (Shift backwards from LaserScan)
+        # Once you figure out what map frame to determine where to place the pixels
+        # Start by creating a fake map and publishing and see if all the frames line up the way you expect
+
     
     # Update every 10ms!
     def update(self, t, stop=False):
