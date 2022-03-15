@@ -22,7 +22,7 @@ class ScanHandler:
         self.rate = rospy.Rate(10.0)
 
         self.scan_listener = rospy.Subscriber('/scan', LaserScan, self.handle_scan)
-        self.wall_location_publisher = rospy.Publisher('scan_handler', numpy_msg(Floats), queue_size=10)
+        self.wall_location_publisher = rospy.Publisher('/scan_info', numpy_msg(Floats), queue_size=10)
 
         rospy.spin()
         
@@ -37,8 +37,8 @@ class ScanHandler:
         angle_min = msg.angle_min
         angle_max = msg.angle_max
 
-        theta = msg.ranges
-        r = np.linspace(angle_min, angle_max, len(theta))
+        r = np.array(msg.ranges)
+        theta = np.linspace(angle_min, angle_max, len(r))
         
         x, y = self.get_coordinates_from_scan(r, theta)
         z = np.zeros_like(x)
@@ -47,9 +47,14 @@ class ScanHandler:
         # Need the ones in order to multiply by the 4x4 rotation/translation
         # matrix
         scan_points = np.vstack([x, y, z, ones])
+        scan_points[np.isinf(scan_points)] = np.nan
+
+        # print(scan_points.T[:, :2])
         
         odom_points = self.scan_to_odom(scan_points)
-        self.wall_location_publisher.publish(odom_points.T)
+        to_publish = odom_points.T
+
+        self.wall_location_publisher.publish(np.r_[to_publish[:, 0], to_publish[:, 1]].astype('float32'))
 
     def get_coordinates_from_scan(self, r: np.ndarray, theta: np.ndarray):
         """
