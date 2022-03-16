@@ -22,7 +22,8 @@ class ScanHandler:
         self.rate = rospy.Rate(10.0)
 
         self.scan_listener = rospy.Subscriber('/scan', LaserScan, self.handle_scan)
-        self.wall_location_publisher = rospy.Publisher('/scan_info', numpy_msg(Floats), queue_size=10)
+        self.wall_location_publisher = rospy.Publisher('/wall_info', numpy_msg(Floats), queue_size=10)
+        self.free_location_publisher = rospy.Publisher('/free_info', numpy_msg(Floats), queue_size=10)
 
         rospy.spin()
         
@@ -39,6 +40,15 @@ class ScanHandler:
 
         r = np.array(msg.ranges)
         theta = np.linspace(angle_min, angle_max, len(r))
+
+        r_free = r[np.isinf(r)]
+        # 3.5 is the range of the scanner
+        scan_range = 3.5
+        r_free = scan_range * np.ones(len(r_free))
+        theta_free = theta[np.isinf(r)]
+        x_free, y_free = self.get_coordinates_from_scan(r_free, theta_free)
+        z_free = np.zeros_like(x_free)
+        ones_free = np.ones_like(x_free)
         
         x, y = self.get_coordinates_from_scan(r, theta)
         z = np.zeros_like(x)
@@ -49,12 +59,20 @@ class ScanHandler:
         scan_points = np.vstack([x, y, z, ones])
         scan_points[np.isinf(scan_points)] = np.nan
 
+        scan_points_free = np.vstack([x_free, y_free, z_free, ones_free])
+
         # print(scan_points.T[:, :2])
         
         odom_points = self.scan_to_odom(scan_points)
         to_publish = odom_points.T
 
+        odom_points_free = self.scan_to_odom(scan_points_free)
+        to_publish_free = odom_points_free.T
+
+        # print(np.r_[to_publish[:, 0], to_publish[:, 1]].astype('float32'))
+
         self.wall_location_publisher.publish(np.r_[to_publish[:, 0], to_publish[:, 1]].astype('float32'))
+        self.free_location_publisher.publish(np.r_[to_publish_free[:, 0], to_publish_free[:, 1]].astype('float32'))
 
     def get_coordinates_from_scan(self, r: np.ndarray, theta: np.ndarray):
         """
@@ -63,8 +81,8 @@ class ScanHandler:
         """
         # Note: angles are measured counter-clockwise from forward
         # facing orientation of the laser scanner
-        x = -r*np.sin(theta)
-        y = r*np.cos(theta)
+        x = r*np.cos(theta)
+        y = r*np.sin(theta)
         return x, y
 
     def scan_to_odom(self, scan_points: np.ndarray):
