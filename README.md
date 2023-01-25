@@ -1,1 +1,1 @@
-# ME133B SLAM
+# ME133B SLAM (Caltech Miniproject)
